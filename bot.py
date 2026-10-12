@@ -1,29 +1,41 @@
 import os
-import threading
+import asyncio
 from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# Dummy Web Server for Render Free Tier
-class SimpleHandler(BaseHTTPRequestHandler):
+# Dummy web server to keep Render Free Web Service alive
+class HealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"Bot is Running Live!")
+        self.wfile.write(b"OK")
+    def log_message(self, format, *args):
+        pass
 
-def run_web():
+def run_http():
     port = int(os.environ.get("PORT", 8080))
-    server = HTTPServer(("0.0.0.0", port), SimpleHandler)
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
     server.serve_forever()
 
-threading.Thread(target=run_web, daemon=True).start()
+threading.Thread(target=run_http, daemon=True).start()
 
-# Telegram Bot Setup
-API_ID = int(os.environ.get("API_ID", 0))
-API_HASH = os.environ.get("API_HASH", "")
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+# Config keys
+api_id_raw = os.environ.get("API_ID", "0").strip()
+API_ID = int(api_id_raw) if api_id_raw.isdigit() else 0
+API_HASH = os.environ.get("API_HASH", "").strip()
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "").strip()
 
-app = Client("video_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+print(f"Starting bot with API_ID: {API_ID}")
+
+app = Client(
+    "video_bot_session",
+    api_id=API_ID,
+    api_hash=API_HASH,
+    bot_token=BOT_TOKEN,
+    in_memory=True
+)
 
 BUTTONS = InlineKeyboardMarkup([
     [InlineKeyboardButton("🖼 Thumb/Cover Extractor", callback_data="thumb")],
@@ -36,7 +48,8 @@ BUTTONS = InlineKeyboardMarkup([
 ])
 
 @app.on_message(filters.command("start"))
-async def start(client, message):
+async def start_handler(client, message):
     await message.reply_text("Please choose your desired action below 👇", reply_markup=BUTTONS)
 
-app.run()
+if __name__ == "__main__":
+    app.run()
