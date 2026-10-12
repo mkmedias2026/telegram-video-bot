@@ -2,10 +2,18 @@ import os
 import asyncio
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
+
+# Python 3.14 loop fix
+try:
+    asyncio.get_event_loop()
+except RuntimeError:
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# Dummy web server to keep Render Free Web Service alive
+# Dummy web server for Render Free Web Service
 class HealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
